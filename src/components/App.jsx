@@ -1,70 +1,77 @@
 import { Component } from 'react';
-import axios from 'axios';
 
-import styles from "./styles.module.css";
+import SearchBar from './Searchbar/SearchBar';
+import ImageGallery from './ImageGallery/ImageGallery';
+import Loader from './Loader/LoaderSpinner';
+import ButtonLoadMore from './Button/ButtonLoadMore';
+import { imagesSearch } from '../shared/api/imagesSearch';
 
 export class App extends Component {
-state = {
-  items: [],
-  loading: false,
-}
+  state = {
+    items: [],
+    search: '',
+    loading: false,
+    error: null,
+    page: 1,
+    // total: 0,
+    // totalHits: 0,
+  };
 
-componentDidMount() {
-  const API_KEY = "32163007-39541f17b63243672bcfecf36"
-  const URL = `https://pixabay.com/api/?q=cat&page=1&key=${API_KEY}&image_type=photo&orientation=horizontal&per_page=12`
+  componentDidMount() {
+    const { search } = this.state;
 
-  this.setState({loading: true})
+    this.setState({ loading: true });
 
-  axios.get(URL)
-  .then(({data})=> {
-    this.setState({items: data.hits, loading: false})
-  })
+    imagesSearch(search)
+      .then(data => {
+        this.setState({ items: data.hits, loading: false });
+      })
+      .catch(error => {
+        this.setState({ error: error.message });
+      })
+      .finally(() => this.setState({ loading: false }));
+  }
 
-}
+  componentDidUpdate(prevProps, prevState) {
+    const { search, page } = this.state;
 
-componentDidUpdate() {
+    if (search !== prevState.search || prevState.page !== page) {
+      imagesSearch(search, page)
+        .then(data => {
+          this.setState(({ items, total, totaHits }) => ({
+            items: [...items, ...data.hits],
+            total: data.total,
+            totalHits: data.totalHits,
+          }));
+        })
+        .catch(error => {
+          this.setState({ error: error.message });
+        })
+        .finally(() => this.setState({ loading: false }));
+    }
+  }
 
-}
+  searchBarSearchImages = ({ search }) => {
+    this.setState({ search, items: [], page: 1 });
+  };
 
+  loadMore = () => {
+    this.setState(({ page }) => ({ page: page + 1 }));
+  };
 
-  render() {   
-
-    const {items, loading } = this.state;
-    const elements = items.map(({id, webformatURL, largeImageURL}) => 
-    <li key={id} className={styles.imageGalleryItem}>
-    <img className={styles.imageGalleryItem_image} src={webformatURL} alt="foto" />
-  </li>)
+  render() {
+    const { items, loading, error } = this.state;
+    const { searchBarSearchImages, loadMore } = this;
 
     return (
       <>
-        <header className={styles.searchbar}>
-          <form className={styles.searchForm}>
-            <button type="submit" className={styles.searchForm_button}>
-              <span className={styles.searchForm_button_label}>Search</span>
-            </button>
+        <SearchBar onSubmit={searchBarSearchImages} />
+        {loading && <Loader />}
+        <ImageGallery items={items} error={error} />
 
-            <input
-              className={styles.searchForm_input}
-              type="text"
-              autoComplete="off"
-              autoFocus
-              placeholder="Search images and photos"
-            />
-          </form>
-        </header>
-
-        <ul className={styles.imageGallery}>
-          {loading && <p>...loading images</p>}
-          {elements}
-        </ul>
-
-        <button className={styles.button_load_more}>Load More</button>
-
-        <div className={styles.overlay_hidden}>
-          <div className={styles.modal}>
-            <img src="" alt="" />
-          </div>
-        </div>
+        {Boolean(items.length) && (
+          <ButtonLoadMore loadMore={loadMore} text={'Load More'} />
+        )}
       </>
     );
   }
