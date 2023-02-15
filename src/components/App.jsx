@@ -5,6 +5,8 @@ import ImageGallery from './ImageGallery/ImageGallery';
 import Loader from './Loader/LoaderSpinner';
 import ButtonLoadMore from './Button/ButtonLoadMore';
 import { imagesSearch } from '../shared/api/imagesSearch';
+import Modal from 'shared/components/Modal/Modal';
+import ImageDetails from './ImageDetails//ImageDetails';
 
 export class App extends Component {
   state = {
@@ -13,8 +15,8 @@ export class App extends Component {
     loading: false,
     error: null,
     page: 1,
-    // total: 0,
-    // totalHits: 0,
+    showModal: false,
+    imageDetails: null,
   };
 
   componentDidMount() {
@@ -59,18 +61,37 @@ export class App extends Component {
     this.setState(({ page }) => ({ page: page + 1 }));
   };
 
+  showImage = ({ largeImageURL }) => {
+    this.setState({
+      imageDetails: { largeImageURL },
+      showModal: true,
+    });
+  };
+
+  closeModal = () => {
+    this.setState({
+      imageDetails: null,
+      showModal: false,
+    });
+  };
+
   render() {
-    const { items, loading, error } = this.state;
-    const { searchBarSearchImages, loadMore } = this;
+    const { items, loading, imageDetails, showModal, error } = this.state;
+    const { searchBarSearchImages, loadMore, showImage, closeModal } = this;
 
     return (
       <>
         <SearchBar onSubmit={searchBarSearchImages} />
         {loading && <Loader />}
-        <ImageGallery items={items} error={error} />
+        <ImageGallery items={items} showImage={showImage} error={error} />
 
         {Boolean(items.length) && (
           <ButtonLoadMore loadMore={loadMore} text={'Load More'} />
+        )}
+        {showModal && (
+          <Modal closeModal={closeModal}>
+            <ImageDetails {...imageDetails} />
+          </Modal>
         )}
       </>
     );
